@@ -14,12 +14,13 @@ int deaths[MAXPLAYERS + 1];
 
 Handle killcookie;
 Handle deadcookie;
+Handle db = INVALID_HANDLE;
 
 public Plugin myinfo =
 {
 	name = "[CS:GO] KD Tag",
 	author = "Kento",
-	version = "1.0",
+	version = "1.1",
 	description = "Show players KD and country on scoreboard.",
 	url = "http://steamcommunity.com/id/kentomatoryoshika/"
 };
@@ -32,7 +33,8 @@ public void OnPluginStart()
 	killcookie = RegClientCookie("kdtag_kills", "Kills in dm server", CookieAccess_Private);
 	deadcookie = RegClientCookie("kdtag_deaths", "Deaths in dm server", CookieAccess_Private);
 	
-	RegConsoleCmd("sm_kd", Command_KD, "Print your kd");
+	RegConsoleCmd("sm_kd", Command_KD, "Print your KD");
+	RegAdminCmd("sm_resetkd", Command_Reset, ADMFLAG_ROOT, "Reset KD");
 	
 	LoadTranslations("kento.kdtag.phrases");
 	
@@ -40,6 +42,16 @@ public void OnPluginStart()
 	{ 
 		if(IsValidClient(i))	OnClientCookiesCached(i);
 	}
+}
+
+// https://github.com/rogeraabbccdd/auramenu/blob/master/scripting/dominoaura-menu.sp
+public void OnMapStart()
+{
+	char[] error = new char[PLATFORM_MAX_PATH];
+	db = SQL_Connect("clientprefs", true, error, PLATFORM_MAX_PATH);
+	
+	if (!LibraryExists("clientprefs") || db == INVALID_HANDLE)
+		SetFailState("clientpref error: %s", error);
 }
 
 public void OnClientPutInServer(int client)
@@ -224,6 +236,45 @@ public Action Command_KD (int client, int args)
 		if (deaths[client] == 0)	dead = 1;
 		CPrintToChat(client, "%T", "CMD KD", client, kills[client], deaths[client], kill / dead);
 	}
+}
+
+public Action Command_Reset (int client, int args)
+{
+	if(IsValidClient(client))
+	{
+		// Delete database
+		// https://github.com/rogeraabbccdd/auramenu/blob/master/scripting/dominoaura-menu.sp#L215
+		char[] query = new char[512];
+		FormatEx(query, 512, "DELETE FROM sm_cookie_cache WHERE EXISTS( SELECT * FROM sm_cookies WHERE sm_cookie_cache.cookie_id = sm_cookies.id AND sm_cookies.name = 'kdtag_kills');");
+		SQL_TQuery(db, ClientPref_PurgeCallback, query);
+		
+		char[] query2 = new char[512];
+		FormatEx(query2, 512, "DELETE FROM sm_cookie_cache WHERE EXISTS( SELECT * FROM sm_cookies WHERE sm_cookie_cache.cookie_id = sm_cookies.id AND sm_cookies.name = 'kdtag_deaths');");
+		SQL_TQuery(db, ClientPref_PurgeCallback, query2);
+		
+		// Reset player in server kd
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsValidClient(i))
+			{
+				deaths[i] = 0;
+				kills[i] = 0;
+			}
+		}
+	}
+}
+
+public void ClientPref_PurgeCallback(Handle owner, Handle handle, const char[] error, any data)
+{
+	if (SQL_GetAffectedRows(owner))
+	{
+		LogMessage("KD has been reset.");
+	}
+}
+
+public void OnMapEnd()
+{
+	CloseHandle(db);
 }
 
 void UpdateTags(int client)
