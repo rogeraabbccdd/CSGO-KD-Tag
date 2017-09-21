@@ -1,0 +1,37 @@
+//**********************************************  Valid Colors	********************************************************
+// {NORMAL}, {DARKRED}, {PINK}, {YELLOW}, {GREEN}, {LIGHTGREEN}, {RED}, {GRAY}, {BLUE}, {DARKBLUE}, {PURPLE}, {ORANGE} *
+//**********************************************************************************************************************
+//                                     http://i.imgur.com/q2wb8Cu.png                                                  *
+//{NORMAL} = x01 | {DARKRED} = x02 | {PINK} = x03 | {GREEN} = x04 | {YELLOW} = x09 | {LIGHTGREEN} = x06 | {RED} = x07  *
+//{GRAY} = x08 | {BLUE} = x0B | {DARKBLUE} = x0C | {PURPLE} = x0E|  {ORANGE} = x10                                     *
+//**********************************************************************************************************************
+"Phrases"
+{
+       "Kill streak"
+       {
+	         "#format"		"{1:N},{2:d}"
+			 "en"         "{GREEN}[DM] {PINK}{1}{NORMAL}Kill {RED}{2} {NORMAL}players in a row!"
+             "zho"         "{GREEN}[DM] {PINK}{1}{NORMAL}連續殺了 {RED}{2} {NORMAL}個人!"
+       }
+       
+       "Kill strak break"
+       {
+	         "#format"		""
+			 "en"         "{GREEN}[DM]{RED}Kill Streak Break!"
+             "zho"         "{GREEN}[DM]{RED}連殺中斷!"
+       }
+	   
+	   "CMD KD"
+       {
+	         "#format"		"{1:d},{2:d}{3:.2f}"
+			 "en"         "{GREEN}[DM] {LIGHTGREEN} {1} kills{NORMAL},{RED} {2} deaths{NORMAL}, {BLUE}KD {3}."
+             "zho"         "{GREEN}[DM] {LIGHTGREEN} {1} 殺{NORMAL},{RED} {2} 死{NORMAL}, {BLUE}KD {3}."
+       }
+       
+       "Kill strak break hint"
+       {
+	         "#format"		""
+			 "en"         "<font color='#FF0000' size='20'>Kill Streak Break!</font>"
+             "zho"         "<font color='#FF0000' size='20'>連殺中斷!</font>"
+       }
+}
