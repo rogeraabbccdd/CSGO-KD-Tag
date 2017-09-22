@@ -8,7 +8,6 @@
 
 #pragma newdecls required
 
-int killstreaks[MAXPLAYERS + 1];
 int kills[MAXPLAYERS + 1];
 int deaths[MAXPLAYERS + 1];
 
@@ -20,7 +19,7 @@ public Plugin myinfo =
 {
 	name = "[CS:GO] KD Tag",
 	author = "Kento",
-	version = "1.1",
+	version = "1.2",
 	description = "Show players KD and country on scoreboard.",
 	url = "http://steamcommunity.com/id/kentomatoryoshika/"
 };
@@ -42,6 +41,10 @@ public void OnPluginStart()
 	{ 
 		if(IsValidClient(i))	OnClientCookiesCached(i);
 	}
+	
+	CreateConVar("sm_kdtag_country", "1", "Show players country?", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	 
+	AutoExecConfig();
 }
 
 // https://github.com/rogeraabbccdd/auramenu/blob/master/scripting/dominoaura-menu.sp
@@ -50,8 +53,7 @@ public void OnMapStart()
 	char[] error = new char[PLATFORM_MAX_PATH];
 	db = SQL_Connect("clientprefs", true, error, PLATFORM_MAX_PATH);
 	
-	if (!LibraryExists("clientprefs") || db == INVALID_HANDLE)
-		SetFailState("clientpref error: %s", error);
+	if (!LibraryExists("clientprefs") || db == INVALID_HANDLE)	SetFailState("clientpref error: %s", error);
 }
 
 public void OnClientPutInServer(int client)
@@ -61,8 +63,7 @@ public void OnClientPutInServer(int client)
 
 public void OnClientCookiesCached(int client)
 {
-	if(!IsValidClient(client))
-		return;
+	if(!IsValidClient(client))	return;
 	
 	// Not bot
 	if(!IsFakeClient(client))
@@ -140,8 +141,6 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 		// prevent suicide
 		if(attacker != client && attacker != 0)
 		{
-			killstreaks[attacker]++;
-			
 			// player kill player
 			if(!IsFakeClient(attacker) && !IsFakeClient(client))
 			{
@@ -168,33 +167,13 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 			}
 		}
 		
-		//PrintToChat(attacker, "kills %d, streak %d", kills[attacker], killstreaks[attacker]);
-		
 		// Tag
 		UpdateTags(attacker);
-		
-		// Announce
-		if(killstreaks[attacker] == 5 || killstreaks[attacker] == 10 || killstreaks[attacker] == 15 || killstreaks[attacker] == 20)
-		{
-			for(int i = 1; i <= MaxClients; i++)
-			{
-				if(IsValidClient(i) && !IsFakeClient(i))	CPrintToChat(i, "%T", "Kill streak", i, attacker, killstreaks[attacker]);
-			}
-		}
 	}
 	
 	// dead
 	if (IsValidClient(client))
 	{
-		if (killstreaks[client] > 5)
-		{
-			CPrintToChat(client, "%t", "Kill streak break");
-			PrintHintText(client, "%t", "Kill streak break hint");
-		}
-		
-		// Rest killstrak when player dead.
-		killstreaks[client] = 0;
-		
 		// player kill player
 		if(!IsFakeClient(attacker) && !IsFakeClient(client))
 		{
@@ -284,19 +263,24 @@ void UpdateTags(int client)
 	int dead = deaths[client];
 	if (deaths[client] == 0)	dead = 1;
 	
-	// Get country
-	char country[3];
-	char ip[14];
-	GetClientIP(client, ip, sizeof(ip)); 
-	if (!GeoipCode2(ip, country))
-	{
-		country = "??";
-	}
-	
 	// Set client tag
-	char clienttag[128];
-	Format(clienttag, sizeof(clienttag), "[%.2f | %s]", kill / dead, country);
-	CS_SetClientClanTag(client, clienttag);
+	if(GetConVarBool(FindConVar("sm_kdtag_country")))
+	{
+		char country[3];
+		char ip[14];
+		GetClientIP(client, ip, sizeof(ip)); 
+		if (!GeoipCode2(ip, country))	country = "??";
+		
+		char clienttag[128];
+		Format(clienttag, sizeof(clienttag), "[%.2f | %s]", kill / dead, country);
+		CS_SetClientClanTag(client, clienttag);
+	}
+	else
+	{
+		char clienttag[128];
+		Format(clienttag, sizeof(clienttag), "[%.2f]", kill / dead);
+		CS_SetClientClanTag(client, clienttag);
+	}
 }
 
 void SetCookies(int client)
