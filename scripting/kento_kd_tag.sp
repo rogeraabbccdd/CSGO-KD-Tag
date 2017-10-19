@@ -19,7 +19,7 @@ public Plugin myinfo =
 {
 	name = "[CS:GO] KD Tag",
 	author = "Kento",
-	version = "1.2",
+	version = "1.3",
 	description = "Show players KD and country on scoreboard.",
 	url = "http://steamcommunity.com/id/kentomatoryoshika/"
 };
@@ -29,17 +29,18 @@ public void OnPluginStart()
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("round_end", Event_RoundEnd);
 	
-	killcookie = RegClientCookie("kdtag_kills", "Kills in dm server", CookieAccess_Private);
-	deadcookie = RegClientCookie("kdtag_deaths", "Deaths in dm server", CookieAccess_Private);
+	killcookie = RegClientCookie("kdtag_kills", "Kills in server", CookieAccess_Private);
+	deadcookie = RegClientCookie("kdtag_deaths", "Deaths in server", CookieAccess_Private);
 	
 	RegConsoleCmd("sm_kd", Command_KD, "Print your KD");
 	RegAdminCmd("sm_resetkd", Command_Reset, ADMFLAG_ROOT, "Reset KD");
+	//RegAdminCmd("sm_allkd", Command_All, ADMFLAG_ROOT, "All KD");
 	
 	LoadTranslations("kento.kdtag.phrases");
 	
 	for(int i = 1; i <= MaxClients; i++)
 	{ 
-		if(IsValidClient(i))	OnClientCookiesCached(i);
+		if(IsValidClient(i) && !IsFakeClient(i))	OnClientCookiesCached(i);
 	}
 	
 	CreateConVar("sm_kdtag_country", "1", "Show players country?", FCVAR_NOTIFY, true, 0.0, true, 1.0);
@@ -63,52 +64,34 @@ public void OnClientPutInServer(int client)
 
 public void OnClientCookiesCached(int client)
 {
-	if(!IsValidClient(client))	return;
+	if(!IsValidClient(client) || IsFakeClient(client))	return;
 	
-	// Not bot
-	if(!IsFakeClient(client))
+	char scookie[128];
+	GetClientCookie(client, killcookie, scookie, sizeof(scookie));
+	if(!StrEqual(scookie, ""))
 	{
-		// Get kill
-		char scookie[8];
-		GetClientCookie(client, killcookie, scookie, sizeof(scookie));
-		if(!StrEqual(scookie, ""))
-		{
-			int icookie = StringToInt(scookie);
-			kills[client] = icookie;
-		}
-		else if(StrEqual(scookie,""))
-		{
-			kills[client] = 0;
-		}
-	
-		// Get death
-		char scookie2[8];
-		GetClientCookie(client, deadcookie, scookie2, sizeof(scookie2));
-		if(!StrEqual(scookie2, ""))
-		{
-			int icookie2 = StringToInt(scookie2);
-			kills[client] = icookie2;
-		}
-		else if(StrEqual(scookie2,""))
-		{
-			deaths[client] = 0;
-		}
+		int icookie = StringToInt(scookie);
+		kills[client] = icookie;
 	}
-	
-	// Bot only count kd in this map.
-	else if(IsFakeClient(client))
+	else if(StrEqual(scookie,""))
 	{
 		kills[client] = 0;
+	}
+	
+	// Get death
+	char scookie2[128];
+	GetClientCookie(client, deadcookie, scookie2, sizeof(scookie2));
+	if(!StrEqual(scookie2, ""))
+	{
+		int icookie2 = StringToInt(scookie2);
+		deaths[client] = icookie2;
+	}
+	else if(StrEqual(scookie2,""))
+	{
 		deaths[client] = 0;
 	}
 	
-	CreateTimer(3.0, SetTags, client, TIMER_FLAG_NO_MAPCHANGE);
-}
-
-public Action SetTags(Handle tmr, int client)
-{
-	// prevent player disconnect in 3 sec
-	if(IsValidClient(client))	UpdateTags(client);
+	UpdateTags(client);
 }
 
 public void OnClientDisconnect(int client)
@@ -146,25 +129,6 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 			{
 				kills[attacker]++;
 			}
-			
-			/* player kill bot
-			else if(!IsFakeClient(attacker) && IsFakeClient(client))
-			{
-				// do nothing
-			}
-			*/
-			
-			// bot kill bot
-			else if(IsFakeClient(attacker) && IsFakeClient(client))
-			{
-				kills[attacker]++;
-			}
-			
-			// bot kill player
-			else if(IsFakeClient(attacker) && !IsFakeClient(client))
-			{
-				kills[attacker]++;
-			}
 		}
 		
 		// Tag
@@ -179,27 +143,6 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 		{
 			deaths[client]++;
 		}
-		
-		// player kill bot
-		else if(!IsFakeClient(attacker) && IsFakeClient(client))
-		{
-			deaths[client]++;
-		}
-		
-		// bot kill bot
-		else if(IsFakeClient(attacker) && IsFakeClient(client))
-		{
-			deaths[client]++;
-		}
-		
-		/* bot kill player
-		else if(IsFakeClient(attacker) && !IsFakeClient(client))
-		{
-			// do nothing
-		}
-		*/
-		
-		//PrintToChat(client, "dead %d", deaths[client]);
 		
 		// Tag
 		UpdateTags(client);
@@ -216,6 +159,22 @@ public Action Command_KD (int client, int args)
 		CPrintToChat(client, "%T", "CMD KD", client, kills[client], deaths[client], kill / dead);
 	}
 }
+
+/*
+public Action Command_All (int client, int args)
+{
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(IsValidClient(i) && !IsFakeClient(i))
+		{
+			float kill = IntToFloat(kills[i]);
+			int dead = deaths[i];
+			if (deaths[i] == 0)	dead = 1;
+			PrintToChat(client, "%N - %d kills, %d deaths, kd %.2f", i, kills[i], deaths[i], kill / dead);
+		}
+	}	
+}
+*/
 
 public Action Command_Reset (int client, int args)
 {
@@ -234,10 +193,11 @@ public Action Command_Reset (int client, int args)
 		// Reset player in server kd
 		for(int i = 1; i <= MaxClients; i++)
 		{
-			if(IsValidClient(i))
+			if(IsValidClient(i) && !IsFakeClient(i))
 			{
 				deaths[i] = 0;
 				kills[i] = 0;
+				UpdateTags(client);
 			}
 		}
 	}
@@ -261,7 +221,7 @@ void UpdateTags(int client)
 	// Get kd
 	float kill = IntToFloat(kills[client]);
 	int dead = deaths[client];
-	if (deaths[client] == 0)	dead = 1;
+	if (dead == 0)	dead = 1;
 	
 	// Set client tag
 	if(GetConVarBool(FindConVar("sm_kdtag_country")))
@@ -285,13 +245,13 @@ void UpdateTags(int client)
 
 void SetCookies(int client)
 {
-	char killscookie[128];
-	IntToString(kills[client], killscookie, sizeof(killscookie));
-	SetClientCookie(client, killcookie, killscookie);
+	char killvalue[128];
+	IntToString(kills[client], killvalue, sizeof(killvalue));
+	SetClientCookie(client, killcookie, killvalue);
 			
-	char deadscookie[128];
-	IntToString(deaths[client], deadscookie, sizeof(deadscookie));
-	SetClientCookie(client, deadcookie, deadscookie);
+	char deadvalue[128];
+	IntToString(deaths[client], deadvalue, sizeof(deadvalue));
+	SetClientCookie(client, deadcookie, deadvalue);
 }
 
 stock bool IsValidClient(int client)
