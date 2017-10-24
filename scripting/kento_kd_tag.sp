@@ -10,16 +10,19 @@
 
 int kills[MAXPLAYERS + 1];
 int deaths[MAXPLAYERS + 1];
+bool b_country;
 
 Handle killcookie;
 Handle deadcookie;
 Handle db = INVALID_HANDLE;
 
+ConVar Cvar_Country;
+
 public Plugin myinfo =
 {
 	name = "[CS:GO] KD Tag",
 	author = "Kento",
-	version = "1.3",
+	version = "1.4",
 	description = "Show players KD and country on scoreboard.",
 	url = "http://steamcommunity.com/id/kentomatoryoshika/"
 };
@@ -33,8 +36,9 @@ public void OnPluginStart()
 	deadcookie = RegClientCookie("kdtag_deaths", "Deaths in server", CookieAccess_Private);
 	
 	RegConsoleCmd("sm_kd", Command_KD, "Print your KD");
+	RegConsoleCmd("sm_allkd", Command_All, "All KD");
+	
 	RegAdminCmd("sm_resetkd", Command_Reset, ADMFLAG_ROOT, "Reset KD");
-	//RegAdminCmd("sm_allkd", Command_All, ADMFLAG_ROOT, "All KD");
 	
 	LoadTranslations("kento.kdtag.phrases");
 	
@@ -43,7 +47,9 @@ public void OnPluginStart()
 		if(IsValidClient(i) && !IsFakeClient(i))	OnClientCookiesCached(i);
 	}
 	
-	CreateConVar("sm_kdtag_country", "1", "Show players country?", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	Cvar_Country = CreateConVar("sm_kdtag_country", "1", "Show players country?", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	
+	Cvar_Country.AddChangeHook(OnCvarChange);
 	 
 	AutoExecConfig();
 }
@@ -55,11 +61,18 @@ public void OnMapStart()
 	db = SQL_Connect("clientprefs", true, error, PLATFORM_MAX_PATH);
 	
 	if (!LibraryExists("clientprefs") || db == INVALID_HANDLE)	SetFailState("clientpref error: %s", error);
+	
+	CreateTimer(5.0, SetTags, INVALID_HANDLE, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+}
+
+public void OnConfigsExecuted()
+{
+	b_country = Cvar_Country.BoolValue;
 }
 
 public void OnClientPutInServer(int client)
 {
-	if (IsValidClient(client))	OnClientCookiesCached(client);
+	if (IsValidClient(client) && !IsFakeClient(client))	OnClientCookiesCached(client);
 }
 
 public void OnClientCookiesCached(int client)
@@ -78,7 +91,6 @@ public void OnClientCookiesCached(int client)
 		kills[client] = 0;
 	}
 	
-	// Get death
 	char scookie2[128];
 	GetClientCookie(client, deadcookie, scookie2, sizeof(scookie2));
 	if(!StrEqual(scookie2, ""))
@@ -90,26 +102,18 @@ public void OnClientCookiesCached(int client)
 	{
 		deaths[client] = 0;
 	}
-	
-	UpdateTags(client);
 }
 
 public void OnClientDisconnect(int client)
 {
-	if(IsValidClient(client) && !IsFakeClient(client))
-	{
-		SetCookies(client);
-	}
+	if(IsValidClient(client) && !IsFakeClient(client))	SetCookies(client);
 }
 
 public Action Event_RoundEnd(Handle event, const char[] name, bool dontBroadcast)
 {
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsValidClient(i) && !IsFakeClient(i))
-		{
-			SetCookies(i);
-		}
+		if(IsValidClient(i) && !IsFakeClient(i))	SetCookies(i);
 	}
 }
 	
@@ -119,32 +123,16 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	
 	// kill
-	if (IsValidClient(attacker))	
+	if (IsValidClient(attacker) && !IsFakeClient(attacker) && !IsFakeClient(client) && attacker != client && attacker != 0)	
 	{
-		// prevent suicide
-		if(attacker != client && attacker != 0)
-		{
-			// player kill player
-			if(!IsFakeClient(attacker) && !IsFakeClient(client))
-			{
-				kills[attacker]++;
-			}
-		}
-		
-		// Tag
+		kills[attacker]++;
 		UpdateTags(attacker);
 	}
 	
 	// dead
-	if (IsValidClient(client))
+	if (IsValidClient(client) && !IsFakeClient(attacker) && !IsFakeClient(client))
 	{
-		// player kill player
-		if(!IsFakeClient(attacker) && !IsFakeClient(client))
-		{
-			deaths[client]++;
-		}
-		
-		// Tag
+		deaths[client]++;
 		UpdateTags(client);
 	}
 }
@@ -158,23 +146,28 @@ public Action Command_KD (int client, int args)
 		if (deaths[client] == 0)	dead = 1;
 		CPrintToChat(client, "%T", "CMD KD", client, kills[client], deaths[client], kill / dead);
 	}
+	return Plugin_Handled;
 }
 
-/*
 public Action Command_All (int client, int args)
 {
-	for(int i = 1; i <= MaxClients; i++)
+	if(IsValidClient(client))
 	{
-		if(IsValidClient(i) && !IsFakeClient(i))
+		CPrintToChat(client, "%T", "CMD All 1", client);
+		
+		for(int i = 1; i <= MaxClients; i++)
 		{
-			float kill = IntToFloat(kills[i]);
-			int dead = deaths[i];
-			if (deaths[i] == 0)	dead = 1;
-			PrintToChat(client, "%N - %d kills, %d deaths, kd %.2f", i, kills[i], deaths[i], kill / dead);
-		}
-	}	
+			if(IsValidClient(i) && !IsFakeClient(i))
+			{
+				float kill = IntToFloat(kills[i]);
+				int dead = deaths[i];
+				if (deaths[i] == 0)	dead = 1;
+				CPrintToChat(client, "%T", "CMD All 2", client, i, kills[i], deaths[i], kill / dead);
+			}
+		}	
+	}
+	return Plugin_Handled;
 }
-*/
 
 public Action Command_Reset (int client, int args)
 {
@@ -197,7 +190,7 @@ public Action Command_Reset (int client, int args)
 			{
 				deaths[i] = 0;
 				kills[i] = 0;
-				UpdateTags(client);
+				UpdateTags(i);
 			}
 		}
 	}
@@ -208,12 +201,28 @@ public void ClientPref_PurgeCallback(Handle owner, Handle handle, const char[] e
 	if (SQL_GetAffectedRows(owner))
 	{
 		LogMessage("KD has been reset.");
+		
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsValidClient(i) && !IsFakeClient(i))
+			{
+				CPrintToChat(i, "%T", "Reset", i);
+			}
+		}
 	}
 }
 
 public void OnMapEnd()
 {
 	CloseHandle(db);
+}
+
+public Action SetTags(Handle timer)
+{
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(IsValidClient(i) && !IsFakeClient(i))	UpdateTags(i);
+	}
 }
 
 void UpdateTags(int client)
@@ -224,7 +233,7 @@ void UpdateTags(int client)
 	if (dead == 0)	dead = 1;
 	
 	// Set client tag
-	if(GetConVarBool(FindConVar("sm_kdtag_country")))
+	if(b_country)
 	{
 		char country[3];
 		char ip[14];
@@ -252,6 +261,19 @@ void SetCookies(int client)
 	char deadvalue[128];
 	IntToString(deaths[client], deadvalue, sizeof(deadvalue));
 	SetClientCookie(client, deadcookie, deadvalue);
+}
+
+public void OnCvarChange(ConVar convar, char[] oldValue, char[] newValue)
+{
+	if (convar == Cvar_Country)
+	{
+		b_country = Cvar_Country.BoolValue;
+		
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsValidClient(i) && !IsFakeClient(i))	UpdateTags(i);
+		}
+	}
 }
 
 stock bool IsValidClient(int client)

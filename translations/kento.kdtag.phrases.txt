@@ -9,8 +9,26 @@
 {
 	"CMD KD"
 	{
-		"#format"		"{1:d},{2:d}{3:.2f}"
-		"en"         "{GREEN}[DM] {LIGHTGREEN} {1} kills{NORMAL},{RED} {2} deaths{NORMAL}, {BLUE}KD {3}."
-		"zho"         "{GREEN}[DM] {LIGHTGREEN} {1} 殺{NORMAL},{RED} {2} 死{NORMAL}, {BLUE}KD {3}."
+		"#format"		"{1:d},{2:d},{3:.2f}"
+		"en"         "{GREEN}[KD] {LIGHTGREEN} {1} kills{NORMAL},{RED} {2} deaths{NORMAL}, {BLUE}KD {3}."
+		"zho"         "{GREEN}[KD] {LIGHTGREEN} {1} 殺{NORMAL},{RED} {2} 死{NORMAL}, {BLUE}KD {3}."
+	}
+	"Reset"
+	{
+		"#format"		""
+		"en"         "{GREEN}[KD] {RED}KD has been reset."
+		"zho"         "{GREEN}[KD] {RED}KD已重置."
+	}
+	"CMD All 1"
+	{
+		"#format"		""
+		"en"         "{GREEN}[KD] {NORMAL}Listing all players' kd..."
+		"zho"         "{GREEN}[KD] {NORMAL}顯示所有玩家的KD..."
+	}
+	"CMD All 2"
+	{
+		"#format"		"{1:N},{2:d},{3:d}{4:.2f}"
+		"en"         "{LIGHTGREEN}--> {PINK}{1}{NORMAL}, {LIGHTGREEN} {2} kills{NORMAL},{RED} {3} deaths{NORMAL}, {BLUE}KD {4}{NORMAL}."
+		"zho"         "{LIGHTGREEN}--> {PINK}{1}{NORMAL}, {LIGHTGREEN} {2} 殺{NORMAL},{RED} {3} 死{NORMAL}, {BLUE}KD {4}{NORMAL}."
 	}
 }
