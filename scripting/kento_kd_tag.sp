@@ -183,6 +183,7 @@ public Action Command_Reset (int client, int args)
 		FormatEx(query2, 512, "DELETE FROM sm_cookie_cache WHERE EXISTS( SELECT * FROM sm_cookies WHERE sm_cookie_cache.cookie_id = sm_cookies.id AND sm_cookies.name = 'kdtag_deaths');");
 		SQL_TQuery(db, ClientPref_PurgeCallback, query2);
 	}
+	return Plugin_Handled;
 }
 
 public void ClientPref_PurgeCallback(Handle owner, Handle handle, const char[] error, any data)
