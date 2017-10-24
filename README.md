@@ -1,6 +1,6 @@
 # CSGO KD Tag
-This plugin is designed for deathmatch servers.
-Show players' KD and country on scoreboard and announce players' kill streak.
+This plugin is designed for retakes servers.
+Show players' KD and country on scoreboard.
 Stats are saved in clientprefs.
 
 # Forum Thread
