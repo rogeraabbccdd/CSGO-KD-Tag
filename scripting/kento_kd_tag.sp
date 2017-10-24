@@ -22,7 +22,7 @@ public Plugin myinfo =
 {
 	name = "[CS:GO] KD Tag",
 	author = "Kento",
-	version = "1.4",
+	version = "1.4.1",
 	description = "Show players KD and country on scoreboard.",
 	url = "http://steamcommunity.com/id/kentomatoryoshika/"
 };
@@ -122,7 +122,7 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 	int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	
-	// kill
+	// kill and not suicide
 	if (IsValidClient(attacker) && !IsFakeClient(attacker) && !IsFakeClient(client) && attacker != client && attacker != 0)	
 	{
 		kills[attacker]++;
@@ -182,17 +182,6 @@ public Action Command_Reset (int client, int args)
 		char[] query2 = new char[512];
 		FormatEx(query2, 512, "DELETE FROM sm_cookie_cache WHERE EXISTS( SELECT * FROM sm_cookies WHERE sm_cookie_cache.cookie_id = sm_cookies.id AND sm_cookies.name = 'kdtag_deaths');");
 		SQL_TQuery(db, ClientPref_PurgeCallback, query2);
-		
-		// Reset player in server kd
-		for(int i = 1; i <= MaxClients; i++)
-		{
-			if(IsValidClient(i) && !IsFakeClient(i))
-			{
-				deaths[i] = 0;
-				kills[i] = 0;
-				UpdateTags(i);
-			}
-		}
 	}
 }
 
@@ -206,6 +195,9 @@ public void ClientPref_PurgeCallback(Handle owner, Handle handle, const char[] e
 		{
 			if(IsValidClient(i) && !IsFakeClient(i))
 			{
+				deaths[i] = 0;
+				kills[i] = 0;
+				UpdateTags(i);
 				CPrintToChat(i, "%T", "Reset", i);
 			}
 		}
