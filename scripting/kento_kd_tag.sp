@@ -22,7 +22,7 @@ public Plugin myinfo =
 {
 	name = "[CS:GO] KD Tag",
 	author = "Kento",
-	version = "1.4.1",
+	version = "1.4.2",
 	description = "Show players KD and country on scoreboard.",
 	url = "http://steamcommunity.com/id/kentomatoryoshika/"
 };
@@ -86,22 +86,15 @@ public void OnClientCookiesCached(int client)
 		int icookie = StringToInt(scookie);
 		kills[client] = icookie;
 	}
-	else if(StrEqual(scookie,""))
-	{
-		kills[client] = 0;
-	}
+	else if(StrEqual(scookie,""))	kills[client] = 0;
 	
-	char scookie2[128];
-	GetClientCookie(client, deadcookie, scookie2, sizeof(scookie2));
-	if(!StrEqual(scookie2, ""))
+	GetClientCookie(client, deadcookie, scookie, sizeof(scookie));
+	if(!StrEqual(scookie, ""))
 	{
-		int icookie2 = StringToInt(scookie2);
-		deaths[client] = icookie2;
+		int icookie = StringToInt(scookie);
+		deaths[client] = icookie;
 	}
-	else if(StrEqual(scookie2,""))
-	{
-		deaths[client] = 0;
-	}
+	else if(StrEqual(scookie,""))	deaths[client] = 0;
 }
 
 public void OnClientDisconnect(int client)
@@ -122,18 +115,11 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 	int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	
-	// kill and not suicide
-	if (IsValidClient(attacker) && !IsFakeClient(attacker) && !IsFakeClient(client) && attacker != client && attacker != 0)	
+	if (IsValidClient(client) && IsValidClient(attacker) && !IsFakeClient(attacker) && !IsFakeClient(client))
 	{
-		kills[attacker]++;
-		UpdateTags(attacker);
-	}
-	
-	// dead
-	if (IsValidClient(client) && !IsFakeClient(attacker) && !IsFakeClient(client))
-	{
+		if(attacker != client && attacker != 0)	kills[attacker]++;
 		deaths[client]++;
-		UpdateTags(client);
+		UpdateTags(attacker);
 	}
 }
 
