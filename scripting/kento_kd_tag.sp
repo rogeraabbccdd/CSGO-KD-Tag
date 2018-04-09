@@ -117,9 +117,14 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 	
 	if (IsValidClient(client) && IsValidClient(attacker) && !IsFakeClient(attacker) && !IsFakeClient(client))
 	{
-		if(attacker != client && attacker != 0)	kills[attacker]++;
+		if(attacker != client && attacker != 0)
+		{
+			kills[attacker]++;
+			UpdateTags(attacker);
+		}
+		
 		deaths[client]++;
-		UpdateTags(attacker);
+		UpdateTags(client);
 	}
 }
 
