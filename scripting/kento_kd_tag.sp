@@ -115,9 +115,9 @@ public Action Event_PlayerDeath(Handle event, const char[] name, bool dontBroadc
 	int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	
-	if (IsValidClient(client) && IsValidClient(attacker) && !IsFakeClient(attacker) && !IsFakeClient(client))
+	if (attacker > 0 && client > 0 && !IsFakeClient(attacker) && !IsFakeClient(client))
 	{
-		if(attacker != client && attacker != 0)
+		if(attacker != client)
 		{
 			kills[attacker]++;
 			UpdateTags(attacker);
